@@ -95,6 +95,19 @@ dialog h2 { margin: 0; font-size: 1.05rem; }
 </head>
 <body>
 <div class="wrap">
+  <div class="banner warn" id="errBanner" hidden></div>
+  <script>
+  (function () {
+    function show(msg) {
+      var b = document.getElementById("errBanner"); if (!b) return;
+      b.hidden = false;
+      b.textContent = "アプリの読み込みでエラーが起きました。ページを下に引っぱって再読み込みしてください。直らない場合は、この文章を Claude に送ってください：" + msg;
+    }
+    window.addEventListener("error", function (e) { show((e.message || "script error") + (e.filename ? " @" + e.filename.split("/").pop() + ":" + e.lineno : "")); });
+    window.addEventListener("unhandledrejection", function (e) { show(String(e.reason && e.reason.message || e.reason)); });
+    window.__appLoadFailed = function () { show("app.js を読み込めませんでした（通信状態を確認してください）"); };
+  })();
+  </script>
   <header>
     <h1>会議録音メモ</h1>
     <button type="button" class="icon-btn" id="settingsBtn">設定</button>
@@ -203,6 +216,6 @@ dialog h2 { margin: 0; font-size: 1.05rem; }
   </form>
 </dialog>
 
-<script type="module" src="app.js"></script>
+<script type="module" src="app.js?v=4" onerror="window.__appLoadFailed && window.__appLoadFailed()"></script>
 </body>
 </html>

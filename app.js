@@ -1,7 +1,7 @@
 import {
   Anthropic, Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType,
   Table, TableRow, TableCell, WidthType, BorderStyle, ShadingType,
-} from "./vendor.js";
+} from "./vendor.js?v=1";
 
 const $ = (id) => document.getElementById(id);
 const el = {
@@ -81,6 +81,7 @@ function saveKey(v) {
 function refreshKeyBanner() {
   const k = getKey();
   el.keyBanner.hidden = !!k;
+  if (!el.keyStatus) return;           // 古い画面（キャッシュ）と組み合わさっても止まらないように
   if (!storageOK) {
     el.keyStatus.textContent = "この画面ではキーを保存できません。閉じると消えるため、次回また入力が必要です。下の「保存できないとき」を確認してください。";
     el.keyStatus.className = "keystatus err";
@@ -92,7 +93,7 @@ function refreshKeyBanner() {
     el.keyStatus.className = "keystatus";
   }
 }
-if (!storageOK) el.storageBanner.hidden = false;
+if (!storageOK && el.storageBanner) el.storageBanner.hidden = false;
 el.apiKey.value = getKey();
 el.model.value = store.get(KEY + "-model", "claude-opus-5-5");
 refreshKeyBanner();
@@ -102,7 +103,7 @@ el.apiKey.addEventListener("input", () => saveKey(el.apiKey.value.trim()));
 el.apiKey.addEventListener("change", () => saveKey(el.apiKey.value.trim()));
 el.model.addEventListener("change", () => store.set(KEY + "-model", el.model.value));
 el.settings.addEventListener("close", () => saveKey(el.apiKey.value.trim()));
-el.settingsForm.addEventListener("submit", () => saveKey(el.apiKey.value.trim()));
+if (el.settingsForm) el.settingsForm.addEventListener("submit", () => saveKey(el.apiKey.value.trim()));
 el.forgetBtn.addEventListener("click", () => { el.apiKey.value = ""; saveKey(""); });
 
 // ---------------------------------------------------------------- recording (Web Speech API)
