@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>会議録音メモ</title>
+<meta name="description" content="iPhoneのSafariで会議を録音しながら文字起こしし、Claudeで議事録を作ってWordで保存するアプリ">
+<meta name="theme-color" content="#26457a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-512.png">
+<style>
+:root {
+  --bg: #eef1f4; --surface: #ffffff; --sheet: #fdfdfb; --ink: #1d2733; --muted: #5b6878;
+  --line: #d3d9e0; --accent: #26457a; --accent-ink: #ffffff; --accent-soft: #e3e9f3;
+  --rec: #c62828; --rec-soft: #fdecea; --ok: #2e7d32;
+  --font: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+  --font-doc: "Hiragino Mincho ProN", "Yu Mincho", serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121820; --surface: #1a222d; --sheet: #1f2834; --ink: #e4e9ef; --muted: #9aa7b6;
+    --line: #313d4c; --accent: #8fb0e8; --accent-ink: #0f1722; --accent-soft: #24324a;
+    --rec: #ff6b6b; --rec-soft: #3a2224; --ok: #81c784; color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.65;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
+.wrap { max-width: 720px; margin: 0 auto; display: grid; gap: 16px; }
+header { display: flex; align-items: center; gap: 10px; }
+header h1 { font-size: 1.35rem; margin: 0; flex: 1; }
+.icon-btn { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: .85rem; }
+.banner { background: var(--accent-soft); border-radius: 10px; padding: 10px 12px; font-size: .85rem; line-height: 1.55; }
+.banner.warn { background: var(--rec-soft); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.card h2 { margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+.card h2 .n { width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-size: .8rem; flex: none; }
+.card h2 .done { margin-left: auto; font-size: .78rem; color: var(--ok); font-weight: 400; }
+label { display: grid; gap: 4px; font-size: .8rem; color: var(--muted); min-width: 0; }
+input, textarea, select {
+  font: inherit; font-size: 16px; color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 8px; padding: 9px 10px; width: 100%; min-width: 0;
+}
+textarea { resize: vertical; line-height: 1.6; }
+.grid2 { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+@media (max-width: 520px) { .grid2 { grid-template-columns: 1fr; } }
+button { font: inherit; font-size: .95rem; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); padding: 10px 14px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button:disabled { opacity: .45; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.row > .grow { flex: 1 1 auto; }
+.hint { font-size: .8rem; color: var(--muted); margin: 0; line-height: 1.55; }
+.status { font-size: .85rem; color: var(--muted); margin: 0; min-height: 1.3em; }
+.status.err { color: var(--rec); }
+/* recorder */
+.recorder { display: grid; justify-items: center; gap: 10px; padding: 8px 0; }
+.recbtn {
+  width: 120px; height: 120px; border-radius: 50%; border: 6px solid var(--rec-soft); background: var(--rec); color: #fff;
+  font-size: 1rem; font-weight: 700; display: grid; place-items: center; box-shadow: 0 2px 10px rgba(0,0,0,.15);
+}
+.recbtn.on { background: var(--surface); color: var(--rec); border-color: var(--rec); }
+.recbtn.on::before { content: ""; width: 34px; height: 34px; border-radius: 6px; background: var(--rec); display: block; margin-bottom: 4px; }
+.recbtn.on { display: grid; grid-template-rows: auto auto; align-content: center; }
+.timer { font-variant-numeric: tabular-nums; font-size: 1.6rem; font-weight: 600; letter-spacing: .04em; }
+.live { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; color: var(--rec); }
+.live::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--rec); animation: blink 1.2s infinite; }
+@keyframes blink { 50% { opacity: .2; } }
+@media (prefers-reduced-motion: reduce) { .live::before { animation: none; } }
+#transcript { min-height: 200px; }
+.interim { color: var(--muted); font-size: .85rem; min-height: 1.3em; margin: 0; overflow-wrap: anywhere; }
+/* minutes */
+.sheet { background: var(--sheet); border: 1px solid var(--line); border-radius: 8px; padding: 18px 16px; font-family: var(--font-doc); font-size: 15px; line-height: 1.85; overflow-wrap: anywhere; min-height: 120px; }
+.sheet h1 { font-size: 1.25rem; margin: 0 0 8px; padding-bottom: 6px; border-bottom: 2px solid var(--ink); }
+.sheet h2 { font-size: 1.02rem; margin: 18px 0 4px; padding-left: 8px; border-left: 4px solid var(--accent); }
+.sheet h3 { font-size: .96rem; margin: 12px 0 2px; }
+.sheet ul { margin: 2px 0; padding-left: 1.3em; }
+.sheet p { margin: 4px 0; }
+.chk { color: var(--rec); background: var(--rec-soft); border-radius: 3px; padding: 0 3px; font-family: var(--font); font-size: .85em; white-space: nowrap; }
+.empty { color: var(--muted); font-family: var(--font); }
+#raw { min-height: 360px; font-family: var(--font-doc); }
+dialog { border: 1px solid var(--line); border-radius: 14px; padding: 18px; background: var(--surface); color: var(--ink); width: min(520px, calc(100vw - 32px)); }
+dialog::backdrop { background: rgba(0,0,0,.4); }
+dialog form { display: grid; gap: 12px; }
+dialog h2 { margin: 0; font-size: 1.05rem; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>会議録音メモ</h1>
+    <button type="button" class="icon-btn" id="settingsBtn">設定</button>
+  </header>
+
+  <div class="banner warn" id="keyBanner" hidden>最初に「設定」から Claude の API キーを登録してください。</div>
+  <div class="banner warn" id="standaloneBanner" hidden>
+    ホーム画面のアプリとして開いているため、音声認識が動かない場合があります。録音できないときは Safari で開いてください：<br><b id="selfUrl"></b>
+  </div>
+
+  <!-- 1. meeting info -->
+  <section class="card" aria-labelledby="h1">
+    <h2 id="h1"><span class="n">1</span>会議の情報</h2>
+    <label>会議名<input id="title" type="text" placeholder="例：第3回 港湾施設整備 打合せ" autocomplete="off"></label>
+    <div class="grid2">
+      <label>日時<input id="when" type="datetime-local"></label>
+      <label>場所<input id="place" type="text" placeholder="例：本社3階 会議室B" autocomplete="off"></label>
+    </div>
+    <label>出席者（読点区切り）<input id="people" type="text" placeholder="例：田中、佐藤、鈴木" autocomplete="off"></label>
+    <label>作成者<input id="author" type="text" placeholder="例：田中" autocomplete="off"></label>
+    <label>固有名詞・専門用語（一行に一つ。聞き間違いの補正用）<textarea id="terms" rows="2" placeholder="例：&#10;岸壁&#10;係留索"></textarea></label>
+  </section>
+
+  <!-- 2. record -->
+  <section class="card" aria-labelledby="h2">
+    <h2 id="h2"><span class="n">2</span>録音と文字起こし</h2>
+    <div class="recorder">
+      <button type="button" class="recbtn" id="recBtn" aria-pressed="false">録音開始</button>
+      <div class="timer" id="timer">00:00:00</div>
+      <span class="live" id="liveMark" hidden>文字起こし中</span>
+    </div>
+    <p class="hint" id="recHint">録音中は画面をつけたまま、Safari を開いたままにしてください。他のアプリに切り替えたり画面を消したりすると、その間は文字起こしされません。</p>
+    <p class="interim" id="interim" aria-live="polite"></p>
+    <label>文字起こし（録音後に直せます。ボイスメモの文字起こしを貼り付けても使えます）
+      <textarea id="transcript" placeholder="録音を始めると、ここに文字が入ります。"></textarea>
+    </label>
+    <div class="row">
+      <button type="button" id="resumeBtn" hidden>認識を再開</button>
+      <button type="button" id="clearBtn">文字起こしを消す</button>
+      <span class="hint grow" id="count" style="text-align:right">0字</span>
+    </div>
+  </section>
+
+  <!-- 3. minutes -->
+  <section class="card" aria-labelledby="h3">
+    <h2 id="h3"><span class="n">3</span>Claude で議事録を作成</h2>
+    <label>まとめ方
+      <select id="style">
+        <option value="brief">要点のみ</option>
+        <option value="std" selected>標準</option>
+        <option value="full">詳しく（発言者つき）</option>
+      </select>
+    </label>
+    <div class="row">
+      <button type="button" class="primary grow" id="goBtn">議事録を作成</button>
+      <button type="button" id="stopBtn" hidden>中止</button>
+    </div>
+    <p class="status" id="status" role="status"></p>
+    <div class="sheet" id="sheet"><p class="empty">ここに議事録が表示されます。</p></div>
+    <textarea id="raw" hidden aria-label="議事録を直接編集"></textarea>
+    <div class="row">
+      <button type="button" id="editBtn" disabled>直接編集</button>
+      <button type="button" id="copyBtn" disabled>テキストをコピー</button>
+    </div>
+    <p class="hint"><span class="chk">［要確認］</span>は聞き取りが不明瞭で、推測を避けた箇所です。</p>
+  </section>
+
+  <!-- 4. word -->
+  <section class="card" aria-labelledby="h4">
+    <h2 id="h4"><span class="n">4</span>Word で保存・共有</h2>
+    <div class="row">
+      <button type="button" class="primary grow" id="shareBtn" disabled>Word ファイルを共有</button>
+      <button type="button" id="dlBtn" disabled>ファイルに保存</button>
+    </div>
+    <p class="hint">「共有」から Word・メール・ファイル・LINE などに送れます。iPhone に Word アプリが入っていれば、そのまま開いて編集できます。</p>
+  </section>
+</div>
+
+<dialog id="settings">
+  <form method="dialog" id="settingsForm">
+    <h2>設定</h2>
+    <label>Claude API キー
+      <input id="apiKey" type="password" autocomplete="off" placeholder="sk-ant-…">
+    </label>
+    <p class="hint">キーはこの iPhone の Safari の中だけに保存され、Claude（Anthropic）以外には送られません。キーは console.anthropic.com で発行できます。料金は使った分だけで、1時間の会議1回でおよそ数十円です。</p>
+    <label>モデル
+      <select id="model">
+        <option value="claude-opus-5-5" selected>Claude Opus 5.5（標準・高精度）</option>
+        <option value="claude-sonnet-5-5">Claude Sonnet 5.5（速い・安い）</option>
+      </select>
+    </label>
+    <div class="row">
+      <button type="button" id="forgetBtn">キーを削除</button>
+      <span class="grow"></span>
+      <button value="close" class="primary">閉じる</button>
+    </div>
+  </form>
+</dialog>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
