@@ -11,7 +11,7 @@ const el = {
   goBtn: $("goBtn"), stopBtn: $("stopBtn"), status: $("status"), sheet: $("sheet"), raw: $("raw"),
   editBtn: $("editBtn"), copyBtn: $("copyBtn"), shareBtn: $("shareBtn"), dlBtn: $("dlBtn"),
   settings: $("settings"), settingsBtn: $("settingsBtn"), apiKey: $("apiKey"), model: $("model"), forgetBtn: $("forgetBtn"),
-  recHint: $("recHint"), keyBanner: $("keyBanner"), standaloneBanner: $("standaloneBanner"), selfUrl: $("selfUrl"),
+  recHint: $("recHint"), keyBanner: $("keyBanner"), keyStatus: $("keyStatus"), storageBanner: $("storageBanner"), settingsForm: $("settingsForm"), standaloneBanner: $("standaloneBanner"), selfUrl: $("selfUrl"),
 };
 
 // ---------------------------------------------------------------- storage
@@ -64,16 +64,46 @@ const isStandalone = window.navigator.standalone === true || matchMedia("(displa
 if (isStandalone) { el.standaloneBanner.hidden = false; el.selfUrl.textContent = location.href.split("#")[0]; }
 
 // ---------------------------------------------------------------- settings
-function refreshKeyBanner() { el.keyBanner.hidden = !!store.get(KEY_API, ""); }
-el.apiKey.value = store.get(KEY_API, "");
+// localStorage が使えるか（Safari の「すべての Cookie をブロック」やプライベートブラウズ等で使えないことがある）
+const storageOK = (() => {
+  try { const k = "__probe__"; localStorage.setItem(k, "1"); const ok = localStorage.getItem(k) === "1"; localStorage.removeItem(k); return ok; }
+  catch { return false; }
+})();
+try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch {}
+
+let memKey = "";                                   // 保存できない環境でも、開いている間は使えるように
+const getKey = () => store.get(KEY_API, "") || memKey;
+function saveKey(v) {
+  memKey = v;
+  if (v) store.set(KEY_API, v); else store.del(KEY_API);
+  refreshKeyBanner();
+}
+function refreshKeyBanner() {
+  const k = getKey();
+  el.keyBanner.hidden = !!k;
+  if (!storageOK) {
+    el.keyStatus.textContent = "この画面ではキーを保存できません。閉じると消えるため、次回また入力が必要です。下の「保存できないとき」を確認してください。";
+    el.keyStatus.className = "keystatus err";
+  } else if (k && store.get(KEY_API, "")) {
+    el.keyStatus.textContent = `保存済み（末尾 …${k.slice(-4)}）。次回から入力は不要です。`;
+    el.keyStatus.className = "keystatus ok";
+  } else {
+    el.keyStatus.textContent = "まだ登録されていません。";
+    el.keyStatus.className = "keystatus";
+  }
+}
+if (!storageOK) el.storageBanner.hidden = false;
+el.apiKey.value = getKey();
 el.model.value = store.get(KEY + "-model", "claude-opus-5-5");
 refreshKeyBanner();
 el.settingsBtn.addEventListener("click", () => el.settings.showModal());
 el.keyBanner.addEventListener("click", () => el.settings.showModal());
-el.apiKey.addEventListener("change", () => { store.set(KEY_API, el.apiKey.value.trim()); refreshKeyBanner(); });
+el.apiKey.addEventListener("input", () => saveKey(el.apiKey.value.trim()));
+el.apiKey.addEventListener("change", () => saveKey(el.apiKey.value.trim()));
 el.model.addEventListener("change", () => store.set(KEY + "-model", el.model.value));
-el.settings.addEventListener("close", () => { store.set(KEY_API, el.apiKey.value.trim()); refreshKeyBanner(); });
-el.forgetBtn.addEventListener("click", () => { el.apiKey.value = ""; store.del(KEY_API); refreshKeyBanner(); });
+el.settings.addEventListener("close", () => saveKey(el.apiKey.value.trim()));
+el.settingsForm.addEventListener("submit", () => saveKey(el.apiKey.value.trim()));
+el.forgetBtn.addEventListener("click", () => { el.apiKey.value = ""; saveKey(""); });
 
 // ---------------------------------------------------------------- recording (Web Speech API)
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -262,7 +292,7 @@ let stream = null;
 const PRICES = { "claude-opus-5-5": [4, 20], "claude-sonnet-5-5": [2, 10] }; // USD / 1M tokens
 
 async function generate() {
-  const apiKey = store.get(KEY_API, "");
+  const apiKey = getKey();
   if (!apiKey) { el.settings.showModal(); setStatus("先に API キーを登録してください。", true); return; }
   if (recording) stopRecording();
   const text = el.transcript.value.trim();

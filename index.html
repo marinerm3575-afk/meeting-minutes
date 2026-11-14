@@ -87,6 +87,9 @@ dialog { border: 1px solid var(--line); border-radius: 14px; padding: 18px; back
 dialog::backdrop { background: rgba(0,0,0,.4); }
 dialog form { display: grid; gap: 12px; }
 dialog h2 { margin: 0; font-size: 1.05rem; }
+.keystatus { margin: 0; font-size: .82rem; color: var(--muted); }
+.keystatus.ok { color: var(--ok); }
+.keystatus.err { color: var(--rec); }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
@@ -97,6 +100,9 @@ dialog h2 { margin: 0; font-size: 1.05rem; }
     <button type="button" class="icon-btn" id="settingsBtn">設定</button>
   </header>
 
+  <div class="banner warn" id="storageBanner" hidden>
+    このブラウザの設定では、API キーや入力内容を保存できません。iPhone の「設定」→「アプリ」→「Safari」で「すべての Cookie をブロック」をオフにし、プライベートではない通常のタブで開いてください。
+  </div>
   <div class="banner warn" id="keyBanner" hidden>最初に「設定」から Claude の API キーを登録してください。</div>
   <div class="banner warn" id="standaloneBanner" hidden>
     ホーム画面のアプリとして開いているため、音声認識が動かない場合があります。録音できないときは Safari で開いてください：<br><b id="selfUrl"></b>
@@ -174,9 +180,15 @@ dialog h2 { margin: 0; font-size: 1.05rem; }
   <form method="dialog" id="settingsForm">
     <h2>設定</h2>
     <label>Claude API キー
-      <input id="apiKey" type="password" autocomplete="off" placeholder="sk-ant-…">
+      <input id="apiKey" type="password" autocomplete="current-password" placeholder="sk-ant-…" autocapitalize="off" spellcheck="false">
     </label>
+    <input type="text" name="username" autocomplete="username" value="claude-api-key" hidden aria-hidden="true">
+    <p class="keystatus" id="keyStatus" role="status"></p>
     <p class="hint">キーはこの iPhone の Safari の中だけに保存され、Claude（Anthropic）以外には送られません。キーは console.anthropic.com で発行できます。料金は使った分だけで、1時間の会議1回でおよそ数十円です。</p>
+    <details class="hint">
+      <summary>保存できないとき</summary>
+      <p style="margin:6px 0 0">・プライベートブラウズのタブでは、閉じると消えます。通常のタブで開いてください。<br>・iPhone の「設定」→「アプリ」→「Safari」で「すべての Cookie をブロック」がオンだと保存できません。<br>・Claude アプリなど他のアプリの中で開いたページでは保存されないことがあります。Safari で開き直してください。<br>・iPhone が「パスワードを保存しますか？」と聞いてきたら「保存」を選ぶと、次回は自動で入力できます。</p>
+    </details>
     <label>モデル
       <select id="model">
         <option value="claude-opus-5-5" selected>Claude Opus 5.5（標準・高精度）</option>
