@@ -47,6 +47,8 @@ input, textarea, select {
   border-radius: 8px; padding: 9px 10px; width: 100%; min-width: 0;
 }
 textarea { resize: vertical; line-height: 1.6; }
+input[type="datetime-local"] { -webkit-appearance: none; appearance: none; display: block; max-width: 100%; min-height: 42px; text-align: left; }
+input[type="datetime-local"]::-webkit-date-and-time-value { text-align: left; }
 .grid2 { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
 @media (max-width: 520px) { .grid2 { grid-template-columns: 1fr; } }
 button { font: inherit; font-size: .95rem; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); padding: 10px 14px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
@@ -216,6 +218,6 @@ dialog h2 { margin: 0; font-size: 1.05rem; }
   </form>
 </dialog>
 
-<script type="module" src="app.js?v=4" onerror="window.__appLoadFailed && window.__appLoadFailed()"></script>
+<script type="module" src="app.js?v=5" onerror="window.__appLoadFailed && window.__appLoadFailed()"></script>
 </body>
 </html>

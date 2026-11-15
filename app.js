@@ -52,7 +52,6 @@ function updateCount() { el.count.textContent = el.transcript.value.replace(/\s/
 const saved = store.get(KEY, null);
 if (saved) {
   for (const k of ["title", "when", "place", "people", "author", "terms", "transcript", "style"]) if (saved[k]) el[k].value = saved[k];
-  if (saved.minutes) setMinutes(saved.minutes);
 }
 if (!el.when.value) el.when.value = nowLocal();
 updateCount();
@@ -554,3 +553,6 @@ function download() {
 el.dlBtn.addEventListener("click", download);
 
 window.addEventListener("beforeunload", (e) => { if (recording) { e.preventDefault(); e.returnValue = ""; } });
+
+// 保存済みの議事録の復元は、描画・Word 出力の関数と定数がすべて定義された後で行う
+if (saved && saved.minutes) setMinutes(saved.minutes);
