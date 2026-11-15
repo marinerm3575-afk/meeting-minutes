@@ -10,7 +10,7 @@ const el = {
   resumeBtn: $("resumeBtn"), clearBtn: $("clearBtn"), count: $("count"), style: $("style"),
   goBtn: $("goBtn"), stopBtn: $("stopBtn"), status: $("status"), sheet: $("sheet"), raw: $("raw"),
   editBtn: $("editBtn"), copyBtn: $("copyBtn"), shareBtn: $("shareBtn"), dlBtn: $("dlBtn"),
-  settings: $("settings"), settingsBtn: $("settingsBtn"), apiKey: $("apiKey"), model: $("model"), forgetBtn: $("forgetBtn"),
+  settings: $("settings"), settingsBtn: $("settingsBtn"), resetBtn: $("resetBtn"), apiKey: $("apiKey"), model: $("model"), forgetBtn: $("forgetBtn"),
   recHint: $("recHint"), keyBanner: $("keyBanner"), keyStatus: $("keyStatus"), storageBanner: $("storageBanner"), settingsForm: $("settingsForm"), standaloneBanner: $("standaloneBanner"), selfUrl: $("selfUrl"),
 };
 
@@ -556,3 +556,38 @@ window.addEventListener("beforeunload", (e) => { if (recording) { e.preventDefau
 
 // 保存済みの議事録の復元は、描画・Word 出力の関数と定数がすべて定義された後で行う
 if (saved && saved.minutes) setMinutes(saved.minutes);
+
+// ---------------------------------------------------------------- 新しい会議（記録内容のリセット）
+// 会議名・日時・場所・出席者・文字起こし・議事録を消す。作成者・専門用語・API キー・モデルは残す。
+let resetTimer = null;
+if (el.resetBtn) el.resetBtn.addEventListener("click", () => {
+  if (recording) { setStatus("録音中は消せません。先に「停止」を押してください。", true); return; }
+  if (el.resetBtn.dataset.confirm !== "1") {
+    el.resetBtn.dataset.confirm = "1";
+    el.resetBtn.textContent = "消してよい？もう一度押す";
+    el.resetBtn.classList.add("confirm");
+    clearTimeout(resetTimer);
+    resetTimer = setTimeout(cancelReset, 4000);
+    return;
+  }
+  cancelReset();
+  if (stream) stream.abort();
+  for (const k of ["title", "place", "people", "transcript"]) el[k].value = "";
+  el.when.value = nowLocal();
+  elapsedBefore = 0; startedAt = 0; renderTimer();
+  pending = ""; el.interim.textContent = "";
+  if (!el.raw.hidden) { el.raw.hidden = true; el.sheet.hidden = false; el.editBtn.textContent = "直接編集"; }
+  el.raw.value = "";
+  setMinutes("");
+  updateCount(); persist();
+  setRecHint("録音中は画面をつけたまま、Safari を開いたままにしてください。他のアプリに切り替えたり画面を消したりすると、その間は文字起こしされません。");
+  setStatus("記録内容を消しました。新しい会議を始められます（作成者・専門用語・API キーは残しています）。");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  el.title.focus();
+});
+function cancelReset() {
+  clearTimeout(resetTimer);
+  el.resetBtn.dataset.confirm = "";
+  el.resetBtn.textContent = "新しい会議";
+  el.resetBtn.classList.remove("confirm");
+}

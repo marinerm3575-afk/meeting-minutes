@@ -35,6 +35,7 @@ body {
 header { display: flex; align-items: center; gap: 10px; }
 header h1 { font-size: 1.35rem; margin: 0; flex: 1; }
 .icon-btn { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: .85rem; }
+.icon-btn.confirm { background: var(--rec); border-color: var(--rec); color: #fff; }
 .banner { background: var(--accent-soft); border-radius: 10px; padding: 10px 12px; font-size: .85rem; line-height: 1.55; }
 .banner.warn { background: var(--rec-soft); }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
@@ -112,6 +113,7 @@ dialog h2 { margin: 0; font-size: 1.05rem; }
   </script>
   <header>
     <h1>会議録音メモ</h1>
+    <button type="button" class="icon-btn" id="resetBtn">新しい会議</button>
     <button type="button" class="icon-btn" id="settingsBtn">設定</button>
   </header>
 
@@ -218,6 +220,6 @@ dialog h2 { margin: 0; font-size: 1.05rem; }
   </form>
 </dialog>
 
-<script type="module" src="app.js?v=5" onerror="window.__appLoadFailed && window.__appLoadFailed()"></script>
+<script type="module" src="app.js?v=6" onerror="window.__appLoadFailed && window.__appLoadFailed()"></script>
 </body>
 </html>
